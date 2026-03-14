@@ -290,7 +290,7 @@ describe('Page Components', () => {
       
       renderWithProviders(<BillsPage />);
 
-      expect(screen.getByText('Bills')).toBeInTheDocument();
+      expect(screen.getByText('Quick Bill Split')).toBeInTheDocument();
     });
 
     it('should render add button', async () => {
@@ -298,8 +298,8 @@ describe('Page Components', () => {
       
       renderWithProviders(<BillsPage />);
 
-      // BillsPage has multiple "Add Bill" buttons (header and empty state)
-      const addButtons = screen.getAllByRole('button', { name: /add bill/i });
+      // BillsPage has multiple "Add Quick Bill" buttons (header and empty state)
+      const addButtons = screen.getAllByRole('button', { name: /add quick bill/i });
       expect(addButtons.length).toBeGreaterThan(0);
       expect(addButtons[0]).toBeInTheDocument();
     });

@@ -9,7 +9,8 @@ const Sidebar = () => {
   const menuItems = [
     { path: '/', icon: 'pi pi-home', label: 'Dashboard' },
     { path: '/bill-types', icon: 'pi pi-tags', label: 'Bill Types' },
-    { path: '/bills', icon: 'pi pi-file', label: 'Bills' },
+    { path: '/usage-bills', icon: 'pi pi-sliders-h', label: 'Usage Bills' },
+    { path: '/quick-bill-split', icon: 'pi pi-bolt', label: 'Quick Bill Split' },
     { path: '/partners', icon: 'pi pi-users', label: 'Partners' },
     { path: '/settings', icon: 'pi pi-cog', label: 'Settings' }
   ];

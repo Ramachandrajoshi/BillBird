@@ -140,7 +140,7 @@ describe('PDF Generator', () => {
       expect(mockAutoTable).toHaveBeenCalledWith(
         expect.objectContaining({
           head: expect.arrayContaining([
-            expect.arrayContaining(['Last Usage', 'Current Usage', 'Usage'])
+            expect.arrayContaining(['Old Reading', 'Current Reading', 'Used', '% Used'])
           ])
         })
       );
@@ -159,7 +159,7 @@ describe('PDF Generator', () => {
       expect(mockAutoTable).toHaveBeenCalledWith(
         expect.objectContaining({
           head: expect.arrayContaining([
-            expect.not.arrayContaining(['Last Usage', 'Current Usage', 'Usage'])
+            expect.not.arrayContaining(['Old Reading', 'Current Reading', 'Used', '% Used'])
           ])
         })
       );
