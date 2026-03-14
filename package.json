@@ -2,6 +2,7 @@
   "name": "billbird",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
   "type": "module",
   "description": "A modern PWA app for dividing bills among partners",
   "scripts": {

@@ -8,21 +8,27 @@ import { Divider } from 'primereact/divider';
 import { useApp } from '../context/AppContext';
 
 const SettingsPage = () => {
-  const { exportData, importData, showToast } = useApp();
+  const { exportData, importData } = useApp();
   const toast = useRef(null);
   const fileUploadRef = useRef(null);
   const [importing, setImporting] = useState(false);
 
+  const getExportBlob = (data) => {
+    const jsonString = JSON.stringify(data, null, 2);
+    return new Blob([jsonString], { type: 'application/json' });
+  };
+
+  const getExportFileName = () => `billbird-backup-${new Date().toISOString().split('T')[0]}.json`;
+
   const handleExport = async () => {
     try {
       const data = await exportData();
-      const jsonString = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      const blob = getExportBlob(data);
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `billbird-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = getExportFileName();
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -39,6 +45,47 @@ const SettingsPage = () => {
         severity: 'error',
         summary: 'Error',
         detail: 'Failed to export data'
+      });
+    }
+  };
+
+  const handleShareExport = async () => {
+    try {
+      const data = await exportData();
+      const blob = getExportBlob(data);
+      const file = new File([blob], getExportFileName(), { type: 'application/json' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'BillBird Backup',
+          text: 'BillBird backup file for import or cloud upload',
+          files: [file]
+        });
+
+        toast.current.show({
+          severity: 'success',
+          summary: 'Shared',
+          detail: 'Backup shared. Choose Google Drive or any destination from share options.'
+        });
+        return;
+      }
+
+      await handleExport();
+      toast.current.show({
+        severity: 'info',
+        summary: 'Download Started',
+        detail: 'Share is not supported on this browser. File downloaded instead.'
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        return;
+      }
+
+      console.error('Share export error:', error);
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Unable to share backup file'
       });
     }
   };
@@ -161,6 +208,12 @@ const SettingsPage = () => {
                   icon="pi pi-download"
                   onClick={handleExport}
                   className="w-full"
+                />
+                <Button
+                  label="Share Backup (Drive/Apps)"
+                  icon="pi pi-share-alt"
+                  className="w-full p-button-outlined mt-2"
+                  onClick={handleShareExport}
                 />
               </div>
 

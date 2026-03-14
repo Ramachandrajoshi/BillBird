@@ -140,17 +140,23 @@ export const generateBillPDF = (bill, entries, partners, billType) => {
   doc.save(fileName);
 };
 
-export const generateAllBillsPDF = (bills, billEntries, partners, billTypes) => {
+export const generateAllBillsPDF = (bills, billEntries, partners, billTypes, options = {}) => {
+  const {
+    reportTitle = 'BillBird - Bills Report',
+    reportSubTitle = `Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`,
+    fileName = `billbird_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+  } = options;
+
   const doc = new jsPDF();
   
   // Header
   doc.setFontSize(20);
   doc.setTextColor(15, 118, 110);
-  doc.text('BillBird - Bills Report', 14, 22);
+  doc.text(reportTitle, 14, 22);
   
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, 14, 30);
+  doc.text(reportSubTitle, 14, 30);
   
   // Summary
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);
@@ -193,7 +199,5 @@ export const generateAllBillsPDF = (bills, billEntries, partners, billTypes) => 
     }
   });
   
-  // Save PDF
-  const fileName = `billbird_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
   doc.save(fileName);
 };

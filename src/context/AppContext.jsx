@@ -150,7 +150,8 @@ export const AppProvider = ({ children }) => {
 
       const entriesWithBillId = entries.map(entry => ({
         ...entry,
-        billId
+        billId,
+        billTypeId: bill.billTypeId
       }));
 
       await db.billEntries.bulkAdd(entriesWithBillId);
@@ -173,7 +174,8 @@ export const AppProvider = ({ children }) => {
       await db.billEntries.where('billId').equals(id).delete();
       const entriesWithBillId = entries.map(entry => ({
         ...entry,
-        billId: id
+        billId: id,
+        billTypeId: billUpdates.billTypeId
       }));
       await db.billEntries.bulkAdd(entriesWithBillId);
 
@@ -202,25 +204,18 @@ export const AppProvider = ({ children }) => {
 
   // Get last usage for a bill type and partner
   const getLastUsage = async (billTypeId, partnerId) => {
-    const entries = await db.billEntries
-      .where('partnerId')
-      .equals(partnerId)
+    const relevantEntries = await db.billEntries
+      .where('[partnerId+billTypeId]')
+      .equals([partnerId, billTypeId])
       .toArray();
-
-    const bills = await db.bills.toArray();
-    const billTypeBills = bills.filter(b => b.billTypeId === billTypeId);
-
-    const relevantEntries = entries.filter(e => 
-      billTypeBills.some(b => b.id === e.billId)
-    );
 
     if (relevantEntries.length === 0) return null;
 
     // Sort by bill date descending
     const sortedEntries = relevantEntries.sort((a, b) => {
-      const billA = billTypeBills.find(bill => bill.id === a.billId);
-      const billB = billTypeBills.find(bill => bill.id === b.billId);
-      return new Date(billB.billDate) - new Date(billA.billDate);
+      const dateA = a.currentReadDate || a.createdAt || 0;
+      const dateB = b.currentReadDate || b.createdAt || 0;
+      return new Date(dateB) - new Date(dateA);
     });
 
     return sortedEntries[0];
@@ -265,7 +260,19 @@ export const AppProvider = ({ children }) => {
           await db.bills.bulkAdd(data.bills);
         }
         if (data.billEntries?.length) {
-          await db.billEntries.bulkAdd(data.billEntries);
+          const normalizedEntries = data.billEntries.map((entry) => {
+            if (entry.billTypeId) {
+              return entry;
+            }
+
+            const matchedBill = data.bills?.find((bill) => bill.id === entry.billId);
+            return {
+              ...entry,
+              billTypeId: matchedBill?.billTypeId || null
+            };
+          });
+
+          await db.billEntries.bulkAdd(normalizedEntries);
         }
       });
       showToast('success', 'Success', 'Data imported successfully');

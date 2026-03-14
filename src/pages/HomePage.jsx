@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { Card } from 'primereact/card';
 import { Chart } from 'primereact/chart';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Tag } from 'primereact/tag';
 import { useApp } from '../context/AppContext';
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 
@@ -24,7 +27,7 @@ const HomePage = () => {
     };
   }, [bills, partners]);
 
-  // Prepare chart data for usage trends
+  // Prepare chart data for usage trends (usage units, not currency)
   const chartData = useMemo(() => {
     const last6Months = eachMonthOfInterval({
       start: subMonths(new Date(), 5),
@@ -33,9 +36,17 @@ const HomePage = () => {
 
     const labels = last6Months.map(date => format(date, 'MMM yyyy'));
 
-    // Group bills by type and month
+    const usageBillTypeIds = new Set(
+      billTypes
+        .filter((type) => type.category === 'usage')
+        .map((type) => type.id)
+    );
+
+    // Group usage entries by bill type and month
     const billsByType = {};
-    billTypes.forEach((type, index) => {
+    billTypes
+      .filter((type) => usageBillTypeIds.has(type.id))
+      .forEach((type, index) => {
       billsByType[type.id] = {
         label: type.name,
         data: new Array(6).fill(0),
@@ -45,14 +56,26 @@ const HomePage = () => {
       };
     });
 
-    bills.forEach(bill => {
+    const billById = new Map(bills.map((bill) => [bill.id, bill]));
+
+    billEntries.forEach((entry) => {
+      if (!usageBillTypeIds.has(entry.billTypeId)) {
+        return;
+      }
+
+      const bill = billById.get(entry.billId);
+      if (!bill) {
+        return;
+      }
+
       const billDate = new Date(bill.billDate);
       const monthIndex = last6Months.findIndex(month => 
         billDate >= startOfMonth(month) && billDate <= endOfMonth(month)
       );
       
       if (monthIndex !== -1 && billsByType[bill.billTypeId]) {
-        billsByType[bill.billTypeId].data[monthIndex] += bill.totalAmount || 0;
+        const usage = Math.max(0, (entry.currentUsage || 0) - (entry.lastUsage || 0));
+        billsByType[bill.billTypeId].data[monthIndex] += usage;
       }
     });
 
@@ -60,7 +83,7 @@ const HomePage = () => {
       labels,
       datasets: Object.values(billsByType).filter(ds => ds.data.some(d => d > 0))
     };
-  }, [bills, billTypes]);
+  }, [bills, billTypes, billEntries]);
 
   // Chart options
   const chartOptions = {
@@ -79,7 +102,7 @@ const HomePage = () => {
         intersect: false,
         callbacks: {
           label: function(context) {
-            return `${context.dataset.label}: ₹${context.parsed.y.toFixed(2)}`;
+            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} units`;
           }
         }
       }
@@ -94,7 +117,7 @@ const HomePage = () => {
         beginAtZero: true,
         ticks: {
           callback: function(value) {
-            return '₹' + value;
+            return `${value}`;
           }
         }
       }
@@ -150,17 +173,16 @@ const HomePage = () => {
     return type ? type.name : 'Unknown';
   };
 
-  // Get status badge class
-  const getStatusBadgeClass = (status) => {
+  const getStatusSeverity = (status) => {
     switch (status) {
       case 'paid':
-        return 'badge-success';
+        return 'success';
       case 'pending':
-        return 'badge-warning';
+        return 'warning';
       case 'overdue':
-        return 'badge-danger';
+        return 'danger';
       default:
-        return 'badge-info';
+        return 'info';
     }
   };
 
@@ -214,7 +236,7 @@ const HomePage = () => {
         <div className="col-12 lg:col-8">
           <Card className="panel-card h-full">
             <div className="card-header">
-              <h3 className="card-title">Usage Trends (Last 6 Months)</h3>
+              <h3 className="card-title">Usage Trends by Bill Type (Last 6 Months)</h3>
             </div>
             <div className="chart-container">
               {chartData.datasets.length > 0 ? (
@@ -223,7 +245,7 @@ const HomePage = () => {
                 <div className="empty-state">
                   <i className="pi pi-chart-line empty-state-icon"></i>
                   <h4 className="empty-state-title">No Data Available</h4>
-                  <p className="empty-state-description">Create some bills to see usage trends</p>
+                  <p className="empty-state-description">Create usage-based bills to see unit trends</p>
                 </div>
               )}
             </div>
@@ -270,7 +292,7 @@ const HomePage = () => {
         <div className="col-12">
           <Card className="panel-card">
             <div className="card-header">
-              <h3 className="card-title">Partner Split Trends (Last 6 Months)</h3>
+              <h3 className="card-title">Partner Split Amount Trends (Last 6 Months)</h3>
             </div>
             <div className="chart-container">
               {partnerChartData.datasets.length > 0 ? (
@@ -294,34 +316,40 @@ const HomePage = () => {
           <h3 className="card-title">Recent Bills</h3>
         </div>
         {recentBills.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBills.map(bill => (
-                  <tr key={bill.id}>
-                    <td className="font-medium">{bill.title}</td>
-                    <td>{getBillTypeName(bill.billTypeId)}</td>
-                    <td>₹{bill.totalAmount?.toFixed(2)}</td>
-                    <td>{format(new Date(bill.billDate), 'dd MMM yyyy')}</td>
-                    <td>
-                      <span className={`badge ${getStatusBadgeClass(bill.status)}`}>
-                        {bill.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            value={recentBills}
+            className="p-datatable-sm"
+            responsiveLayout="scroll"
+            stripedRows
+          >
+            <Column
+              field="title"
+              header="Title"
+              body={(rowData) => <span className="font-medium">{rowData.title}</span>}
+            />
+            <Column
+              field="billTypeId"
+              header="Type"
+              body={(rowData) => getBillTypeName(rowData.billTypeId)}
+            />
+            <Column
+              field="totalAmount"
+              header="Amount"
+              body={(rowData) => `₹${rowData.totalAmount?.toFixed(2)}`}
+            />
+            <Column
+              field="billDate"
+              header="Date"
+              body={(rowData) => format(new Date(rowData.billDate), 'dd MMM yyyy')}
+            />
+            <Column
+              field="status"
+              header="Status"
+              body={(rowData) => (
+                <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
+              )}
+            />
+          </DataTable>
         ) : (
           <div className="empty-state">
             <i className="pi pi-file empty-state-icon"></i>

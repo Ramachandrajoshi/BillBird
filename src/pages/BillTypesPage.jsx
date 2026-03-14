@@ -250,7 +250,7 @@ const BillTypesPage = () => {
             onChange={(e) => setFormData({ ...formData, category: e.value })}
             placeholder="Select category"
             className="w-full"
-            appendTo="body"
+            appendTo="self"
           />
           <small className="form-helper">
             Usage based bills track consumption over time
@@ -265,7 +265,7 @@ const BillTypesPage = () => {
             onChange={(e) => setFormData({ ...formData, splitType: e.value })}
             placeholder="Select split type"
             className="w-full"
-            appendTo="body"
+            appendTo="self"
           />
           <small className="form-helper">
             How the bill amount should be divided among partners
@@ -282,7 +282,7 @@ const BillTypesPage = () => {
               placeholder="Select fields"
               className="w-full"
               display="chip"
-              appendTo="body"
+              appendTo="self"
             />
             <small className="form-helper">
               Fields to track for usage-based bills

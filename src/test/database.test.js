@@ -35,10 +35,14 @@ describe('Database Operations', () => {
       expect(electricityBill).toBeDefined();
       expect(electricityBill.category).toBe('usage');
       
-      const internetBill = billTypes.find(bt => bt.name === 'Internet');
-      expect(internetBill).toBeDefined();
-      expect(internetBill.category).toBe('fixed');
-      expect(internetBill.splitType).toBe('equal');
+      const lunchBill = billTypes.find(bt => bt.name === 'Lunch');
+      expect(lunchBill).toBeDefined();
+      expect(lunchBill.category).toBe('fixed');
+      expect(lunchBill.splitType).toBe('equal');
+
+      const cabBill = billTypes.find(bt => bt.name === 'Cab Fee');
+      expect(cabBill).toBeDefined();
+      expect(cabBill.splitType).toBe('ratio');
 
       const gasBill = billTypes.find(bt => bt.name === 'Gas');
       expect(gasBill).toBeUndefined();
@@ -83,7 +87,7 @@ describe('Database Operations', () => {
       expect(names.filter((n) => n === 'Electricity').length).toBe(1);
     });
 
-    it('should remove legacy default bill types that are unused', async () => {
+    it('should preserve existing records and add missing default bill types', async () => {
       await billTypesTable.bulkAdd([
         {
           name: 'Water',
@@ -102,7 +106,7 @@ describe('Database Operations', () => {
           updatedAt: new Date()
         },
         {
-          name: 'Lunch',
+          name: 'Dinner',
           category: 'fixed',
           splitType: 'equal',
           fields: [],
@@ -114,9 +118,12 @@ describe('Database Operations', () => {
       await initializeDefaultBillTypes();
 
       const billTypes = await billTypesTable.toArray();
-      expect(billTypes.find(bt => bt.name === 'Gas')).toBeUndefined();
-      expect(billTypes.find(bt => bt.name === 'Lunch')).toBeUndefined();
+      expect(billTypes.find(bt => bt.name === 'Gas')).toBeDefined();
+      expect(billTypes.find(bt => bt.name === 'Dinner')).toBeDefined();
       expect(billTypes.find(bt => bt.name === 'Water')).toBeDefined();
+      expect(billTypes.find(bt => bt.name === 'Electricity')).toBeDefined();
+      expect(billTypes.find(bt => bt.name === 'Cab Fee')).toBeDefined();
+      expect(billTypes.find(bt => bt.name === 'Travel Fee')).toBeDefined();
     });
 
     it('should keep legacy default bill types that are already in use', async () => {

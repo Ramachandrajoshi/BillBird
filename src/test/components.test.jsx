@@ -164,7 +164,7 @@ const renderWithProviders = (component) => {
   return render(
     <PrimeReactProvider>
       <AppProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           {component}
         </BrowserRouter>
       </AppProvider>
@@ -222,7 +222,7 @@ describe('Page Components', () => {
       
       renderWithProviders(<HomePage />);
 
-      expect(screen.getByText('Usage Trends (Last 6 Months)')).toBeInTheDocument();
+      expect(screen.getByText('Usage Trends by Bill Type (Last 6 Months)')).toBeInTheDocument();
     });
 
     it('should render bill types distribution section', async () => {

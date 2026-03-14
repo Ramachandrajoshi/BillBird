@@ -9,20 +9,39 @@ db.version(1).stores({
   billEntries: '++id, billId, partnerId, lastUsage, currentUsage, splitAmount, paid'
 });
 
+db.version(2)
+  .stores({
+    billTypes: '++id, name, category, splitType, createdAt, updatedAt',
+    partners: '++id, name, email, phone, createdAt',
+    bills: '++id, billTypeId, title, totalAmount, billDate, status, createdAt, updatedAt',
+    billEntries: '++id, billId, billTypeId, partnerId, [partnerId+billTypeId], lastUsage, currentUsage, splitAmount, paid'
+  })
+  .upgrade(async (tx) => {
+    const bills = await tx.table('bills').toArray();
+    const billTypeMap = new Map(bills.map((bill) => [bill.id, bill.billTypeId]));
+
+    await tx
+      .table('billEntries')
+      .toCollection()
+      .modify((entry) => {
+        if (!entry.billTypeId) {
+          entry.billTypeId = billTypeMap.get(entry.billId) || null;
+        }
+      });
+  });
+
 // Bill Types
 export const billTypesTable = db.billTypes;
 export const partnersTable = db.partners;
 export const billsTable = db.bills;
 export const billEntriesTable = db.billEntries;
 
-const legacyDefaultBillTypeNames = ['Gas', 'Lunch', 'Dinner', 'Cab Fee', 'Travel Fee'];
-
 const defaultBillTypeDefinitions = [
   { name: 'Water', category: 'usage', splitType: 'usage', fields: ['lastUsage', 'currentUsage', 'lastReadDate', 'currentReadDate'] },
   { name: 'Electricity', category: 'usage', splitType: 'usage', fields: ['lastUsage', 'currentUsage', 'lastReadDate', 'currentReadDate'] },
-  { name: 'Internet', category: 'fixed', splitType: 'equal', fields: [] },
-  { name: 'Rent', category: 'fixed', splitType: 'percentage', fields: [] },
-  { name: 'Groceries', category: 'fixed', splitType: 'equal', fields: [] },
+  { name: 'Lunch', category: 'fixed', splitType: 'equal', fields: [] },
+  { name: 'Cab Fee', category: 'fixed', splitType: 'ratio', fields: [] },
+  { name: 'Travel Fee', category: 'fixed', splitType: 'percentage', fields: [] },
 ];
 
 // Singleton promise — ensures concurrent calls (e.g. React 18 Strict Mode double-effect)
@@ -54,21 +73,7 @@ const _runInitialization = async () => {
     await billTypesTable.bulkDelete(dupIds);
   }
 
-  // 2. Remove unused legacy types
-  const survivors = existing.filter((bt) => !dupIds.includes(bt.id));
-  const legacyTypes = survivors.filter((bt) => legacyDefaultBillTypeNames.includes(bt.name));
-  if (legacyTypes.length > 0) {
-    const allBills = await billsTable.toArray();
-    const usedBillTypeIds = new Set(allBills.map((bill) => bill.billTypeId));
-    const removableLegacyIds = legacyTypes
-      .filter((bt) => !usedBillTypeIds.has(bt.id))
-      .map((bt) => bt.id);
-    if (removableLegacyIds.length > 0) {
-      await billTypesTable.bulkDelete(removableLegacyIds);
-    }
-  }
-
-  // 3. Add any default types that are still missing
+  // 2. Add any default types that are still missing
   const currentNames = new Set((await billTypesTable.toArray()).map((bt) => bt.name));
   const toAdd = defaultBillTypeDefinitions
     .filter((dt) => !currentNames.has(dt.name))
